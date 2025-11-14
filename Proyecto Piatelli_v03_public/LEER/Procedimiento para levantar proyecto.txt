@@ -1,0 +1,25 @@
+1- Abrir una terminal y nombrarla servidor:
+
+    #Levantar servidor:
+     cd server
+     node index.js
+
+2- Abrir OTRA terminal sin cerrar la anterior, y renombrar como front
+    #Levantar front
+    cd client
+    npm run dev
+
+3.Abrir OTRA terminal sin cerrar la anterior, y renombrar como Ngrok:
+	#levantar para enviar mail de confirmacion de reserva
+	 ngrok authtoken xxxx
+	ngrok http 5000
+
+4. Para probar metodo de pago:
+Ingresar a: https://www.mercadopago.com.ar/developers/es
+Ingresar a cuenta con:
+- Gmail: xxxx
+- Contraseña: xxxx
+- Validacion de email: xxxx
+Mantener abierta la pagina.
+Simular pago en factura y verificar si llega email.
+

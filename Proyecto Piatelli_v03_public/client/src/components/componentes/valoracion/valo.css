@@ -1,0 +1,301 @@
+/* Contenedor principal */
+.review-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ffffffff 0%, #ffffffff 100%);
+  overflow: hidden;
+  padding: 40px 20px;
+}
+
+/* Formas de fondo animadas - Más juntas */
+.review-bg-shape {
+  position: absolute;
+  background: linear-gradient(135deg, #ff9a56 0%, #ff6b35 100%);
+  border-radius: 40px;
+  z-index: 5;
+}
+
+.review-shape-1 {
+  width: 180px;
+  height: 180px;
+  top: 25%;
+  right: 20%; /* Más cerca del centro */
+  opacity: 0.5;
+}
+
+.review-shape-2 {
+  width: 220px;
+  height: 220px;
+  bottom: 20%;
+  left: 18%; /* Más cerca del centro */
+  opacity: 0.35;
+}
+
+.review-shape-3 {
+  width: 140px;
+  height: 140px;
+  top: 55%;
+  right: 15%; /* Más cerca del centro */
+  opacity: 0.4;
+}
+
+/* Wrapper del contenido */
+.review-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  width: 100%;
+  max-width: 900px;
+}
+
+/* Tarjeta principal */
+.review-card {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  background: #000000;
+  color: white;
+  border-radius: 25px;
+  padding: 35px 40px;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+/* Contenedor de imagen redonda - Sin borde naranja */
+.review-image-container {
+  position: relative;
+  flex-shrink: 0;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%; /* Hace la imagen redonda */
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  /* Se eliminó el borde naranja */
+}
+
+.review-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.8s ease, transform 0.8s ease;
+}
+
+.review-image-blurred {
+  filter: blur(10px);
+  transform: scale(1.1);
+}
+
+/* Contenido de la review */
+.review-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Icono de chat */
+.review-chat-icon {
+  position: absolute;
+  top: 25px;
+  right: 30px;
+  width: 45px;
+  height: 45px;
+  background: #ff6b35;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.review-chat-dot {
+  width: 5px;
+  height: 5px;
+  background: white;
+  border-radius: 50%;
+}
+
+/* Rating y estrellas */
+.review-rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-stars-container {
+  display: flex;
+  gap: 4px;
+}
+
+.review-star {
+  font-size: 20px;
+  display: inline-block;
+}
+
+.review-star-filled {
+  color: #ffd700;
+}
+
+.review-star-empty {
+  color: #333;
+}
+
+.review-rating-text {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* Texto de la review */
+.review-text {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-text-word {
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.review-author {
+  font-weight: 600;
+  font-size: 15px;
+  margin: 0;
+  color: #ffffffff;
+}
+
+/* Barra de progreso */
+.review-progress-bar {
+  height: 3px;
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.review-progress-fill {
+  height: 100%;
+  background: #ff6b35;
+  border-radius: 10px;
+  transform-origin: left;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .review-container {
+    height: 350px;
+    padding: 30px 15px;
+  }
+
+  .review-card {
+    padding: 25px 30px;
+    gap: 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .review-image-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .review-content {
+    gap: 8px;
+  }
+
+  .review-rating {
+    justify-content: center;
+  }
+
+  .review-chat-icon {
+    top: 15px;
+    right: 20px;
+    width: 35px;
+    height: 35px;
+  }
+
+  /* Formas más pequeñas y juntas en móvil */
+  .review-shape-1 {
+    width: 120px;
+    height: 120px;
+    top: 20%;
+    right: 10%;
+  }
+
+  .review-shape-2 {
+    width: 150px;
+    height: 150px;
+    bottom: 15%;
+    left: 8%;
+  }
+
+  .review-shape-3 {
+    width: 100px;
+    height: 100px;
+    top: 60%;
+    right: 5%;
+  }
+}
+
+@media (max-width: 480px) {
+  .review-container {
+    height: 300px;
+    padding: 20px 10px;
+  }
+
+  .review-card {
+    padding: 20px 25px;
+    gap: 15px;
+  }
+
+  .review-image-container {
+    width: 80px;
+    height: 80px;
+  }
+
+  .review-text {
+    font-size: 14px;
+  }
+
+  .review-author {
+    font-size: 13px;
+  }
+
+  .review-star {
+    font-size: 16px;
+  }
+
+  /* Formas aún más pequeñas en móvil pequeño */
+  .review-shape-1 {
+    width: 80px;
+    height: 80px;
+    top: 25%;
+    right: 5%;
+  }
+
+  .review-shape-2 {
+    width: 100px;
+    height: 100px;
+    bottom: 20%;
+    left: 5%;
+  }
+
+  .review-shape-3 {
+    width: 70px;
+    height: 70px;
+    top: 65%;
+    right: 3%;
+  }
+}

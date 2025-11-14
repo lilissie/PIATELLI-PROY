@@ -1,0 +1,992 @@
+// tareas pendientes:
+// insertar los datos en la BD
+import axios from "axios";
+import { useEffect, useState } from "react";
+import {
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaUser,
+} from "react-icons/fa";
+import { supabase } from "../../supabase/client";
+import "./factura.css";
+
+// Hook separado - SOLO esto debería obtener los datos
+function useDatosAlojamientos() {
+  const [datos, setDatos] = useState({
+    preciosPorDia: {
+      alojamientos: {},
+      actividades: {}
+    },
+    capacidadesAlojamiento: {}
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Función para obtener los datos manteniendo la estructura exacta
+  const obtenerDatosAlojamientos = async () => {
+    try {
+      // Consultar habitaciones para precios y capacidades
+      const { data: habitacionesData, error: errorHabitaciones } = await supabase
+        .from('habitaciones')
+        .select('tipo_habitacion, precio_por_dia, capacidad_max')
+        .eq('estado', 'libre')
+        .order('tipo_habitacion');
+
+      if (errorHabitaciones) throw errorHabitaciones;
+
+      // Consultar actividades
+      const { data: actividadesData, error: errorActividades } = await supabase
+        .from('actividades')
+        .select('nombre_actividad, precio_por_dia')
+        .order('nombre_actividad');
+
+      if (errorActividades) throw errorActividades;
+
+      // Mapear EXACTAMENTE como tu objeto hardcodeado
+      const preciosPorDia = {
+        alojamientos: {},
+        actividades: {}
+      };
+
+      const capacidadesAlojamiento = {};
+
+      // Procesar habitaciones - manteniendo los nombres exactos
+      habitacionesData.forEach(habitacion => {
+        const tipo = habitacion.tipo_habitacion;
+        
+        // Precios por día
+        preciosPorDia.alojamientos[tipo] = Number(habitacion.precio_por_dia);
+        
+        // Capacidades
+        capacidadesAlojamiento[tipo] = habitacion.capacidad_max;
+      });
+
+      // Procesar actividades - manteniendo los nombres exactos
+      actividadesData.forEach(actividad => {
+        preciosPorDia.actividades[actividad.nombre_actividad] = Number(actividad.precio_por_dia);
+      });
+
+      return {
+        preciosPorDia,
+        capacidadesAlojamiento
+      };
+
+    } catch (error) {
+      console.error('Error obteniendo datos:', error);
+      throw error; // Propagar el error
+    }
+  };
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const datosFromDB = await obtenerDatosAlojamientos();
+        
+        if (datosFromDB) {
+          setDatos(datosFromDB);
+        } else {
+          setError("No se pudieron cargar los datos");
+        }
+      } catch (err) {
+        console.error("Error en hook:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
+
+  return { 
+    preciosPorDia: datos.preciosPorDia,
+    capacidadesAlojamiento: datos.capacidadesAlojamiento,
+    loading, 
+    error 
+  };
+}
+
+const Factura = () => {
+  const [loading, setLoading] = useState(false);
+  const [fechasSalon, setFechasSalon] = useState({ inicio: "", fin: "" }); // Agregar este estado faltante
+
+  // BD - usar el hook correctamente
+  const { preciosPorDia, capacidadesAlojamiento, loading: loadingBD, error } = useDatosAlojamientos();
+
+  // DEBUG: Verificar qué datos se están cargando
+  useEffect(() => {
+    console.log("Datos cargados desde BD:", {
+      preciosPorDia,
+      capacidadesAlojamiento,
+      loadingBD,
+      error
+    });
+  }, [preciosPorDia, capacidadesAlojamiento, loadingBD, error]);
+
+
+  // peticiones BD
+  // Función para obtener habitaciones específicas
+  const obtenerHabitacionesParaReserva = async () => {
+    try {
+      const habitacionesReservadas = [];
+
+      // Para cada tipo de alojamiento seleccionado, obtener una habitación disponible
+      for (const tipo of tipoAlojamiento) {
+        const { data: habitaciones, error } = await supabase
+          .from('habitaciones')
+          .select('habitacion_id, numero_habitacion, tipo_habitacion')
+          .eq('tipo_habitacion', tipo)
+          .eq('estado', 'libre')
+          .limit(1);
+
+        if (error) throw error;
+
+        if (habitaciones && habitaciones.length > 0) {
+          habitacionesReservadas.push({
+            habitacion_id: habitaciones[0].habitacion_id,
+            numero_habitacion: habitaciones[0].numero_habitacion,
+            tipo_habitacion: habitaciones[0].tipo_habitacion
+          });
+        } else {
+          throw new Error(`No hay habitaciones disponibles para ${tipo}`);
+        }
+      }
+
+      return habitacionesReservadas;
+    } catch (error) {
+      console.error("Error seleccionando habitaciones:", error);
+      throw error;
+    }
+  };
+
+// Función para guardar reserva directamente en BD
+const guardarReservaEnBD = async () => {
+  try {
+    setLoading(true);
+  
+    // 1. Obtener habitaciones específicas para reservar
+    const habitacionesReservadas = await obtenerHabitacionesParaReserva();
+    console.log("Habitaciones a reservar:", habitacionesReservadas);
+  
+    // 2. CREAR O OBTENER CLIENTE
+    let clienteId;
+    
+    // Verificar si el cliente ya existe
+    const { data: clienteExistente, error: errorCliente } = await supabase
+      .from('clientes')
+      .select('cliente_id')
+      .eq('dni_cli', datosPersona.dni)
+      .single();
+  
+    if (errorCliente && errorCliente.code !== 'PGRST116') {
+      throw errorCliente;
+    }
+  
+    if (clienteExistente) {
+      // Cliente existe, usar su ID
+      clienteId = clienteExistente.cliente_id;
+      console.log("Cliente existente encontrado:", clienteId);
+      
+      // Actualizar datos del cliente
+      await supabase
+        .from('clientes')
+        .update({
+          nom_cli: datosPersona.nombre,
+          apel_cli: datosPersona.apellido,
+          email_cli: datosPersona.email
+        })
+        .eq('cliente_id', clienteId);
+        
+    } else {
+      // Crear nuevo cliente
+      const { data: nuevoCliente, error: errorNuevoCliente } = await supabase
+        .from('clientes')
+        .insert([{
+          nom_cli: datosPersona.nombre,
+          apel_cli: datosPersona.apellido,
+          dni_cli: datosPersona.dni,
+          email_cli: datosPersona.email
+        }])
+        .select()
+        .single();
+      
+      if (errorNuevoCliente) {
+        console.error("Error creando cliente:", errorNuevoCliente);
+        throw errorNuevoCliente;
+      }
+    
+      clienteId = nuevoCliente.cliente_id;
+      console.log("Nuevo cliente creado:", clienteId);
+    }
+  
+    // 3. CREAR RESERVA
+    const reservaData = {
+      cliente_id: clienteId,
+      cantidad_personas: personas,
+      fecha_inicio: fechas.inicio,
+      fecha_fin: fechas.fin,
+      total_pagar: calcularTotal(),
+      metodo_pago: 'transferencia', // Corregido typo
+      estado: 'confirmada'
+    };
+  
+    const { data: reserva, error: errorReserva } = await supabase
+      .from('reservas')
+      .insert([reservaData])
+      .select()
+      .single();
+  
+    if (errorReserva) {
+      console.error("Error creando reserva:", errorReserva);
+      throw errorReserva;
+    }
+  
+    console.log("Reserva creada con ID:", reserva.reserva_id);
+  
+    // 4. GUARDAR HABITACIONES RESERVADAS
+    if (habitacionesReservadas.length > 0) {
+      const reservaHabitacionesData = habitacionesReservadas.map(habitacion => ({
+        reserva_id: reserva.reserva_id,
+        habitacion_id: habitacion.habitacion_id
+      }));
+    
+      const { error: errorReservaHab } = await supabase
+        .from('reservas_habitaciones')
+        .insert(reservaHabitacionesData);
+    
+      if (errorReservaHab) {
+        console.error("Error guardando reserva_habitaciones:", errorReservaHab);
+        throw errorReservaHab;
+      }
+    
+      console.log("Relación reserva-habitaciones guardada");
+    }
+
+    // 5. GUARDAR ACTIVIDADES RESERVADAS con FECHAS DE LA RESERVA
+    if (actividades && actividades.length > 0) {
+      console.log("Guardando actividades:", actividades);
+      
+      // Primero, obtener los IDs de las actividades por nombre
+      const { data: actividadesData, error: errorActividades } = await supabase
+        .from('actividades')
+        .select('actividad_id, nombre_actividad')
+        .in('nombre_actividad', actividades);
+      
+      if (errorActividades) {
+        console.error("Error obteniendo IDs de actividades:", errorActividades);
+        throw errorActividades;
+      }
+      
+      if (actividadesData && actividadesData.length > 0) {
+        const reservaActividadesData = actividadesData.map(actividad => ({
+          reserva_id: reserva.reserva_id,
+          actividad_id: actividad.actividad_id,
+          fecha_inicio_act: fechas.inicio, // Fecha inicio de la reserva
+          fecha_fin_act: fechas.fin        // Fecha fin de la reserva
+        }));
+      
+        const { error: errorReservaAct } = await supabase
+          .from('reservas_actividades')
+          .insert(reservaActividadesData);
+      
+        if (errorReservaAct) {
+          console.error("Error guardando reservas_actividades:", errorReservaAct);
+          throw errorReservaAct;
+        }
+      
+        console.log("Relación reservas-actividades guardada:", actividadesData.length, "actividades");
+        console.log("Fechas usadas para actividades:", fechas.inicio, "a", fechas.fin);
+      } else {
+        console.log("No se encontraron actividades para guardar");
+      }
+    } else {
+      console.log("No hay actividades seleccionadas para guardar");
+    }
+  
+    // 6. ACTUALIZAR ESTADO DE HABITACIONES
+    const habitacionIds = habitacionesReservadas.map(h => h.habitacion_id);
+    
+    const { error: errorUpdateHab } = await supabase
+      .from('habitaciones')
+      .update({ estado: 'ocupada' })
+      .in('habitacion_id', habitacionIds);
+  
+    if (errorUpdateHab) {
+      console.error("Error actualizando habitaciones:", errorUpdateHab);
+      throw errorUpdateHab;
+    }
+  
+    console.log("Estados de habitaciones actualizados a 'ocupada'");
+
+    // 7. MOSTRAR CONFIRMACIÓN
+    const actividadesTexto = actividades.length > 0 ? actividades.join(', ') : 'Ninguna';
+/*     alert(`🎉 ¡Reserva confirmada!\n\n📋 Detalles:\n• Número de reserva: ${reserva.reserva_id}\n• Nombre: ${datosPersona.nombre} ${datosPersona.apellido}\n• Fechas: ${fechas.inicio} a ${fechas.fin}\n• Total: $${calcularTotal()}\n• Alojamientos: ${tipoAlojamiento.join(', ')}\n• Actividades: ${actividadesTexto}`);
+ */
+    // 8. LIMPIAR FORMULARIO
+    setDatosPersona({ nombre: "", apellido: "", dni: "", email: "" });
+    setFechas({ inicio: "", fin: "" });
+    setTipoAlojamiento([]);
+    setActividades([]);
+    setPersonas(2);
+  
+    return reserva.reserva_id;
+  
+  } catch (error) {
+    console.error("Error guardando reserva:", error);
+    alert(`Error al procesar la reserva:\n${error.message}`);
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  // Función con axios para crear la preferencia en el backend
+  const createPreference = async () => {
+    try {
+      console.log("Enviando petición al backend...");
+
+      // Crear objeto con todos los datos necesarios
+      const preferenceData = {
+        title: "Reserva Hotel - " + tipoAlojamiento.join(", "),
+        quantity: 1,
+        price: calcularTotal(),
+        // Datos adicionales para el email y registro
+        metadata: {
+          nombre: datosPersona.nombre,
+          apellido: datosPersona.apellido,
+          email: datosPersona.email,
+          dni: datosPersona.dni,
+          personas: personas,
+          fechas: fechas,
+          alojamientos: tipoAlojamiento,
+          actividades: actividades,
+          total: calcularTotal(),
+          diasReserva: calcularDiasReserva(), // Agregar días de reserva
+        },
+      };
+
+      console.log("Datos enviados al backend:", preferenceData);
+
+      const response = await axios.post(
+        "http://localhost:5000/create_preference",
+        preferenceData
+      );
+
+      console.log("Respuesta del backend:", response.data);
+      const { id } = response.data;
+      return id;
+    } catch (error) {
+      console.error("Error al crear la preferencia:", error);
+      alert("Error al procesar la compra. Revisa la consola.");
+      return null;
+    }
+  };
+
+// Función para manejar el clic en "Reservar"
+const handleReservar = async () => {
+  // Primero validar todos los campos
+  if (!validarCampos()) {
+    alert("Por favor, complete todos los campos requeridos correctamente.");
+    return;
+  }
+
+  // Verificar capacidad
+  if (!capacidadSuficiente) {
+    alert("Capacidad insuficiente para la cantidad de personas seleccionadas.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+
+    // 1. PRIMERO: Crear preferencia en MercadoPago
+    const mercadoPagoId = await createPreference();
+    
+    if (!mercadoPagoId) {
+      throw new Error("No se pudo conectar con MercadoPago");
+    }
+
+
+    // 2. SEGUNDO: Guardar reserva en BD (solo si MercadoPago funciona)
+    const reservaId = await guardarReservaEnBD();
+    
+
+    // 3. TERCERO: Redirigir a MercadoPago para el pago
+    window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${mercadoPagoId}`;
+
+  } catch (error) {
+    console.error("Error en el proceso de reserva:", error);
+    
+    if (error.message.includes("MercadoPago")) {
+      alert("Error al conectar con el servicio de pagos. Por favor, intenta nuevamente.");
+    } else if (error.message.includes("habitaciones")) {
+      alert("Error: " + error.message);
+    } else {
+      alert("Error al procesar la reserva. Por favor, verifica los datos e intenta nuevamente.");
+    }
+    
+    setLoading(false);
+  }
+};
+
+  // fin BD
+
+
+
+  const [personas, setPersonas] = useState(2);
+  const [datosPersona, setDatosPersona] = useState({
+    nombre: "",
+    apellido: "",
+    dni: "",
+    email: "",
+  });
+  const [errores, setErrores] = useState({});
+  const [fechas, setFechas] = useState({
+    inicio: "",
+    fin: "",
+  });
+  const [tipoAlojamiento, setTipoAlojamiento] = useState([]);
+  const [actividades, setActividades] = useState([]);
+
+  // Validaciones
+  const validarCampos = () => {
+    const nuevosErrores = {};
+
+    // Validar datos personales
+    if (!datosPersona.nombre.trim()) nuevosErrores.nombre = "Nombre requerido";
+    if (!datosPersona.apellido.trim())
+      nuevosErrores.apellido = "Apellido requerido";
+    if (!datosPersona.dni.trim()) nuevosErrores.dni = "DNI requerido";
+    else if (!/^\d{1,3}(\.\d{3})*$/.test(datosPersona.dni))
+      nuevosErrores.dni = "Formato DNI inválido (ej: 45.111.222)";
+
+    if (!datosPersona.email.trim()) nuevosErrores.email = "Email requerido";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosPersona.email))
+      nuevosErrores.email = "Email inválido";
+
+    // Validar fechas de reserva
+    if (!fechas.inicio) nuevosErrores.inicio = "Fecha de inicio requerida";
+    if (!fechas.fin) nuevosErrores.fin = "Fecha de fin requerida";
+    else if (fechas.inicio && fechas.fin) {
+      const inicio = new Date(fechas.inicio);
+      const fin = new Date(fechas.fin);
+      const diferenciaDias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+
+      if (fin <= inicio) {
+        nuevosErrores.fin = "La fecha fin debe ser posterior a la fecha inicio";
+      } else if (diferenciaDias < 1) {
+        nuevosErrores.fin = "La estadía mínima es de 1 día completo";
+      }
+    }
+
+    // Validar alojamiento
+    if (tipoAlojamiento.length === 0)
+      nuevosErrores.alojamiento = "Seleccione al menos un alojamiento";
+
+    // Validar capacidad
+    if (!capacidadSuficiente) {
+      nuevosErrores.capacidad = `Capacidad insuficiente: ${calcularCapacidadTotal()} personas (necesitas ${personas})`;
+    }
+
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  };
+
+  // Función para calcular la capacidad total
+  const calcularCapacidadTotal = () => {
+    return tipoAlojamiento.reduce((total, alojamiento) => {
+      return total + (capacidadesAlojamiento[alojamiento] || 0);
+    }, 0);
+  };
+
+  // Función para cambiar personas con validación
+  const cambiarPersonas = (nuevaCantidad) => {
+    if (nuevaCantidad < 1 || nuevaCantidad > 50) return;
+    setPersonas(nuevaCantidad);
+  };
+
+  // Calcular días entre fechas de reserva
+  const calcularDiasReserva = () => {
+    return calcularDias(fechas.inicio, fechas.fin);
+  };
+
+  // Calcular días del salón de eventos
+  const calcularDiasSalon = () => {
+    return calcularDias(fechasSalon.inicio, fechasSalon.fin);
+  };
+
+  // Calcular días entre fechas (función genérica)
+  const calcularDias = (inicio, fin) => {
+    if (!inicio || !fin) return 0;
+    const start = new Date(inicio);
+    const end = new Date(fin);
+    const diffTime = Math.abs(end - start);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Calcular precio total de un alojamiento considerando los días
+  const calcularPrecioAlojamiento = (alojamiento) => {
+    const dias = calcularDiasReserva();
+    const precioPorDia = preciosPorDia.alojamientos[alojamiento] || 0;
+    return precioPorDia * dias;
+  };
+
+  // Calcular precio total de todos los alojamientos
+  const calcularTotalAlojamientos = () => {
+    return tipoAlojamiento.reduce((total, alojamiento) => {
+      return total + calcularPrecioAlojamiento(alojamiento);
+    }, 0);
+  };
+
+  const calcularTotal = () => {
+    let total = 0;
+
+    // Calcular por alojamientos (considerando días)
+    total += calcularTotalAlojamientos();
+
+    // Calcular por actividades
+    actividades.forEach((actividad) => {
+      if (preciosPorDia.actividades[actividad]) {
+        if (actividad === "Alquilar salón de eventos") {
+          const dias = calcularDiasSalon();
+          total += preciosPorDia.actividades[actividad] * Math.max(1, dias);
+        } else {
+          total += preciosPorDia.actividades[actividad];
+        }
+      }
+    });
+
+    return total;
+  };
+
+  const handleActividadChange = (actividad) => {
+    if (actividades.includes(actividad)) {
+      setActividades(actividades.filter((a) => a !== actividad));
+      // Limpiar errores del salón si se deselecciona
+      if (actividad === "Alquilar salón de eventos") {
+        setErrores((prev) => ({
+          ...prev,
+          inicioSalon: undefined,
+          finSalon: undefined,
+        }));
+      }
+    } else {
+      setActividades([...actividades, actividad]);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setDatosPersona((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    // Limpiar error del campo cuando se escribe
+    if (errores[name]) {
+      setErrores((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
+  };
+
+  const handleFechaChange = (e) => {
+    const { name, value } = e.target;
+    setFechas((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    if (errores[name]) {
+      setErrores((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
+  };
+
+
+
+  const capacidadSuficiente = calcularCapacidadTotal() >= personas;
+  const diasReserva = calcularDiasReserva();
+  const diasSalon = calcularDiasSalon();
+
+  // Mostrar loading mientras se cargan los datos de BD
+  if (loadingBD) {
+    return (
+      <div className="reserva-factura">
+        <div className="factura-container">
+          <div className="loading-container">
+            <p>🔄 Cargando precios y disponibilidad...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si hay problema cargando datos
+  if (error) {
+    return (
+      <div className="reserva-factura">
+        <div className="factura-container">
+          <div className="error-container">
+            <h3>Error cargando datos</h3>
+            <p>{error}</p>
+            <button onClick={() => window.location.reload()}>Reintentar</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="reserva-factura">
+      <div className="factura-container">
+        {/* ... (el resto de tu JSX permanece igual) */}
+        <header className="factura-header">
+          <div className="paper-cut-top"></div>
+          <h1 className="factura-titulo">RESERVAS</h1>
+        </header>
+
+
+        {/* Datos Personales */}
+        <section className="seccion-datos">
+          <h3 className="seccion-titulo">Datos Personales</h3>
+          <div className="formulario-grid">
+            <div className="input-group">
+              <label>Nombre</label>
+              <input
+                type="text"
+                name="nombre"
+                value={datosPersona.nombre}
+                onChange={handleInputChange}
+                placeholder="Pablo"
+                className={errores.nombre ? "error" : ""}
+              />
+              {errores.nombre && (
+                <span className="mensaje-error">{errores.nombre}</span>
+              )}
+            </div>
+            <div className="input-group">
+              <label>Apellido</label>
+              <input
+                type="text"
+                name="apellido"
+                value={datosPersona.apellido}
+                onChange={handleInputChange}
+                placeholder="Celaya"
+                className={errores.apellido ? "error" : ""}
+              />
+              {errores.apellido && (
+                <span className="mensaje-error">{errores.apellido}</span>
+              )}
+            </div>
+            <div className="input-group">
+              <label>DNI</label>
+              <input
+                type="text"
+                name="dni"
+                value={datosPersona.dni}
+                onChange={handleInputChange}
+                placeholder="45.111.222"
+                className={errores.dni ? "error" : ""}
+              />
+              {errores.dni && (
+                <span className="mensaje-error">{errores.dni}</span>
+              )}
+            </div>
+            <div className="input-group">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={datosPersona.email}
+                onChange={handleInputChange}
+                placeholder="pablocelaya@gmail.com"
+                className={errores.email ? "error" : ""}
+              />
+              {errores.email && (
+                <span className="mensaje-error">{errores.email}</span>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="divisor"></div>
+
+        {/* Cantidad de Personas */}
+        <section className="seccion-personas">
+          <h3 className="seccion-titulo">Cantidad de Personas</h3>
+          <div className="contador-personas">
+            <FaUser className="persona-icono" />
+            <button
+              className="btn-contador"
+              onClick={() => cambiarPersonas(personas - 1)}
+              disabled={personas <= 1}
+            >
+              -
+            </button>
+            <span className="cantidad-personas">{personas}</span>
+            <button
+              className="btn-contador"
+              onClick={() => cambiarPersonas(personas + 1)}
+              disabled={personas >= 50}
+            >
+              +
+            </button>
+          </div>
+          <div className="info-rango">Mínimo: 1 - Máximo: 50 personas</div>
+          {errores.capacidad && (
+            <span className="mensaje-error">{errores.capacidad}</span>
+          )}
+        </section>
+
+        <div className="divisor"></div>
+
+        {/* Fechas de Reserva */}
+        <section className="seccion-fechas">
+          <h3 className="seccion-titulo">Fechas de Reserva</h3>
+          <div className="fechas-grid">
+            <div className="input-group">
+              <label>
+                <FaCalendarAlt className="icono-fecha" />
+                Fecha de Inicio
+              </label>
+              <input
+                type="date"
+                name="inicio"
+                value={fechas.inicio}
+                onChange={handleFechaChange}
+                className={errores.inicio ? "error" : ""}
+              />
+              {errores.inicio && (
+                <span className="mensaje-error">{errores.inicio}</span>
+              )}
+            </div>
+            <div className="input-group">
+              <label>
+                <FaCalendarAlt className="icono-fecha" />
+                Fecha de Fin
+              </label>
+              <input
+                type="date"
+                name="fin"
+                value={fechas.fin}
+                onChange={handleFechaChange}
+                className={errores.fin ? "error" : ""}
+              />
+              {errores.fin && (
+                <span className="mensaje-error">{errores.fin}</span>
+              )}
+            </div>
+          </div>
+          {diasReserva > 0 && (
+            <div className="info-dias-reserva">
+              Duración de la reserva: {diasReserva} día
+              {diasReserva !== 1 ? "s" : ""}
+            </div>
+          )}
+        </section>
+
+        <div className="divisor"></div>
+
+        {/* Tipo de Alojamiento */}
+        <section className="seccion-alojamiento">
+          <h3 className="seccion-titulo">Tipo de Alojamiento</h3>
+          {errores.alojamiento && (
+            <span className="mensaje-error">{errores.alojamiento}</span>
+          )}
+
+          {/* Mensaje de capacidad */}
+          {tipoAlojamiento.length > 0 && (
+            <div
+              className={`mensaje-capacidad ${
+                capacidadSuficiente ? "suficiente" : "insuficiente"
+              }`}
+            >
+              {capacidadSuficiente ? (
+                <>
+                  <FaCheckCircle /> Capacidad suficiente:{" "}
+                  {calcularCapacidadTotal()} personas
+                </>
+              ) : (
+                <>
+                  <FaExclamationTriangle /> Capacidad insuficiente:{" "}
+                  {calcularCapacidadTotal()} personas (necesitas {personas})
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="selector-alojamiento">
+            <select
+              value=""
+              onChange={(e) => {
+                if (
+                  e.target.value &&
+                  !tipoAlojamiento.includes(e.target.value)
+                ) {
+                  setTipoAlojamiento([...tipoAlojamiento, e.target.value]);
+                  if (errores.alojamiento) {
+                    setErrores((prev) => ({ ...prev, alojamiento: undefined }));
+                  }
+                }
+              }}
+              className="dropdown-alojamiento"
+            >
+              <option value="">Seleccione un alojamiento</option>
+              {Object.entries(preciosPorDia.alojamientos).map(
+                ([alojamiento, precioPorDia]) => (
+                  <option key={alojamiento} value={alojamiento}>
+                    {alojamiento} - ${precioPorDia}/día (Capacidad:{" "}
+                    {capacidadesAlojamiento[alojamiento]} personas)
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+
+          {/* Etiquetas de alojamientos seleccionados */}
+          <div className="etiquetas-alojamiento">
+            {tipoAlojamiento.map((alojamiento) => (
+              <div key={alojamiento} className="etiqueta-alojamiento">
+                <span className="etiqueta-texto">
+                  {alojamiento} - ${preciosPorDia.alojamientos[alojamiento]}/día
+                  {diasReserva > 0 && (
+                    <span className="precio-total-alojamiento">
+                      {" "}
+                      (Total: ${calcularPrecioAlojamiento(alojamiento)})
+                    </span>
+                  )}
+                  <span className="capacidad-info">
+                    {" "}
+                    (Cap: {capacidadesAlojamiento[alojamiento]})
+                  </span>
+                </span>
+                <button
+                  className="etiqueta-eliminar"
+                  onClick={() =>
+                    setTipoAlojamiento(
+                      tipoAlojamiento.filter((a) => a !== alojamiento)
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="divisor"></div>
+
+        {/* Actividades */}
+        <section className="seccion-actividades">
+          <h3 className="seccion-titulo">Actividades</h3>
+          <div className="lista-actividades">
+            {Object.entries(preciosPorDia.actividades).map(
+              ([actividad, precio]) => (
+                <div key={actividad} className="actividad-container">
+                  <label className="actividad-item">
+                    <input
+                      type="checkbox"
+                      checked={actividades.includes(actividad)}
+                      onChange={() => handleActividadChange(actividad)}
+                    />
+                    <span className="checkmark"></span>
+                    <span className="actividad-nombre">{actividad}</span>
+                    <span className="actividad-precio">
+                      {actividad === "Alquilar salón de eventos"
+                        ? `$${precio}/día`
+                        : `+$${precio}`}
+                    </span>
+                  </label>
+
+                </div>
+              )
+            )}
+          </div>
+        </section>
+
+        <div className="divisor"></div>
+
+        {/* Resumen de Pago */}
+        <section className="seccion-resumen">
+          <h3 className="seccion-titulo">Resumen de Pago</h3>
+          <div className="resumen-detalles">
+            {tipoAlojamiento.length > 0 && (
+              <div className="resumen-linea">
+                <span>Alojamientos ({diasReserva} días):</span>
+                <div className="alojamientos-lista">
+                  {tipoAlojamiento.map((alojamiento) => (
+                    <div key={alojamiento} className="item-resumen">
+                      <span>{alojamiento}</span>
+                      <span>
+                        ${preciosPorDia.alojamientos[alojamiento]} ×{" "}
+                        {diasReserva} días = $
+                        {calcularPrecioAlojamiento(alojamiento)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {actividades.length > 0 && (
+              <div className="resumen-actividades">
+                <span>Actividades:</span>
+                <div className="actividades-lista">
+                  {actividades.map((actividad) => (
+                    <div key={actividad} className="item-resumen">
+                      <span>{actividad}</span>
+                      <span>
+                        {actividad === "Alquilar salón de eventos"
+                          ? `$${
+                              preciosPorDia.actividades[actividad]
+                            } × ${diasSalon} días = $${
+                              preciosPorDia.actividades[actividad] * diasSalon
+                            }`
+                          : `$${preciosPorDia.actividades[actividad]}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="resumen-total">
+              <span>Total a pagar:</span>
+              <span className="total-monto">${calcularTotal()}</span>
+            </div>
+          </div>
+
+          <div className="medio-pago">
+            <span className="label">Medio de pago:</span>
+            <div className="mercado-pago-badge">
+              <span>Mercado Pago</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Acciones */}
+        <footer className="factura-actions">
+          <button
+            className="btn btn-primario btn-pagar"
+            onClick={handleReservar}
+            disabled={loading || !capacidadSuficiente}
+          >
+            {loading
+              ? "Redirigiendo a MercadoPago..."
+              : `Pagar: $${calcularTotal()}`}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+export default Factura;

@@ -1,0 +1,533 @@
+SELECT 
+  p.id,
+  p.email_perfil,
+  p.nom_perfil,
+  p.rol_perfil,
+  u.created_at as user_created
+FROM profiles p
+JOIN auth.users u ON p.id = u.id
+WHERE p.email_perfil IN ('admin@piattelli.com');
+
+
+-- SOLUCIÓN 1: Actualizar IDs basado en email
+UPDATE profiles 
+SET id = auth.users.id
+FROM auth.users 
+WHERE profiles.email_perfil = auth.users.email;
+
+-- Verificar resultado
+SELECT p.id, p.email_perfil, u.email, u.id as auth_id
+FROM profiles p
+LEFT JOIN auth.users u ON p.email_perfil = u.email;
+
+
+
+-- Eliminar todas las tablas existentes (en orden correcto por dependencias)
+DROP TABLE IF EXISTS HISTORIAL_TAREAS CASCADE;
+DROP TABLE IF EXISTS TAREAS CASCADE;
+DROP TABLE IF EXISTS RESERVAS_ACTIVIDADES CASCADE;
+DROP TABLE IF EXISTS RESERVAS_HABITACIONES CASCADE;
+DROP TABLE IF EXISTS VALORACIONES CASCADE;
+DROP TABLE IF EXISTS RESERVAS CASCADE;
+DROP TABLE IF EXISTS VENTAS_VINO CASCADE;
+DROP TABLE IF EXISTS ACTIVIDADES CASCADE;
+DROP TABLE IF EXISTS HABITACIONES CASCADE;
+DROP TABLE IF EXISTS CLIENTES CASCADE;
+DROP TABLE IF EXISTS VINOS CASCADE;
+
+
+-- BODEGA PIATELLI -- CREACION DE TABLAS --
+CREATE TABLE profiles (
+  trabajador_id UUID NOT NULL,
+  nom_perfil VARCHAR(100),
+  rol_perfil VARCHAR(50),
+  email_perfil VARCHAR(150),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE CLIENTES (
+  cliente_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nom_cli VARCHAR(100),
+  apel_cli VARCHAR(100),
+  dni_cli VARCHAR(20),
+  email_cli VARCHAR(150),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE VINOS (
+  vino_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre_vino VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE HABITACIONES (
+  habitacion_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  numero_habitacion VARCHAR(10),
+  tipo_habitacion VARCHAR(50),
+  valoracion_prom DECIMAL(3,2),
+  estado VARCHAR(30),
+  capacidad_max INTEGER,
+  precio_por_dia DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE ACTIVIDADES (
+  actividad_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre_actividad VARCHAR(100),
+  tipo VARCHAR(50),
+  precio_por_dia DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE RESERVAS (
+  reserva_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id UUID NOT NULL,
+  cantidad_personas INTEGER,
+  fecha_inicio DATE,
+  fecha_fin DATE,
+  total_pagar DECIMAL(10,2),
+  metodo_pago VARCHAR(50),
+  estado VARCHAR(20),
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (cliente_id) REFERENCES CLIENTES(cliente_id) ON DELETE CASCADE
+);
+
+CREATE TABLE VENTAS_VINO (
+  venta_vino_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fecha_venta_vino TIMESTAMP DEFAULT NOW(),
+  cantidad_venta INTEGER,
+  vino_id UUID NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (vino_id) REFERENCES VINOS(vino_id) ON DELETE CASCADE
+);
+
+CREATE TABLE VALORACIONES (
+  valoracion_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  valoracion INTEGER,
+  comentario TEXT,
+  cliente_id UUID NOT NULL,
+  habitacion_id UUID NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (cliente_id) REFERENCES CLIENTES(cliente_id) ON DELETE CASCADE,
+  FOREIGN KEY (habitacion_id) REFERENCES HABITACIONES(habitacion_id) ON DELETE CASCADE
+);
+
+-- TABLAS INTERMEDIAS --
+
+CREATE TABLE RESERVAS_HABITACIONES (
+  reserva_id UUID NOT NULL,
+  habitacion_id UUID NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (reserva_id, habitacion_id),
+  FOREIGN KEY (reserva_id) REFERENCES RESERVAS(reserva_id) ON DELETE CASCADE,
+  FOREIGN KEY (habitacion_id) REFERENCES HABITACIONES(habitacion_id) ON DELETE CASCADE
+);
+
+CREATE TABLE RESERVAS_ACTIVIDADES (
+  reserva_id UUID NOT NULL,
+  actividad_id UUID NOT NULL,
+  fecha_inicio_act DATE,
+  fecha_fin_act DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (reserva_id, actividad_id),
+  FOREIGN KEY (reserva_id) REFERENCES RESERVAS(reserva_id) ON DELETE CASCADE,
+  FOREIGN KEY (actividad_id) REFERENCES ACTIVIDADES(actividad_id) ON DELETE CASCADE
+);
+
+CREATE TABLE TAREAS (
+  tarea_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prioridad INTEGER,
+  nombre_tarea VARCHAR(100),
+  fecha_tarea DATE,
+  estado VARCHAR(20),
+  trabajador_id UUID NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (trabajador_id) REFERENCES profiles(trabajador_id) ON DELETE CASCADE
+);
+
+CREATE TABLE HISTORIAL_TAREAS (
+  historial_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tarea_id UUID NOT NULL,
+  fecha_baja DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (tarea_id) REFERENCES TAREAS(tarea_id) ON DELETE CASCADE
+);
+
+
+-- CARGA DE DATOS --
+
+-- Insertar datos en HABITACIONES
+INSERT INTO HABITACIONES (numero_habitacion, tipo_habitacion, estado, capacidad_max, precio_por_dia) VALUES
+('3', 'matrimonial', 'libre', 2, 200.00),
+('4', 'matrimonial', 'libre', 2, 200.00)
+INSERT INTO HABITACIONES (numero_habitacion, tipo_habitacion, estado, capacidad_max, precio_por_dia) VALUES
+('3', 'ejecutiva', 'libre', 2, 150.00),
+('4', 'ejecutiva', 'mantenimiento', 2, 150.00),
+('1', 'matrimonial', 'libre', 2, 200.00),
+('2', 'matrimonial', 'libre', 2, 200.00),
+('1', 'glamping', 'libre', 4, 350.00),
+('2', 'glamping', 'libre', 4, 350.00),
+('3', 'glamping', 'libre', 4, 350.00),
+('4', 'glamping', 'libre', 4, 350.00);
+
+
+-- Insertar datos en PROFILES con UUIDs manuales
+INSERT INTO profiles (trabajador_id, nom_perfil, rol_perfil, email_perfil, created_at) VALUES
+('eeb7cf45-9ffa-43d4-b728-db0494227b31', 'Juan Pérez', 'operario', 'juan.perez@bodegapiarelli.com', '2024-01-01 08:00:00'),
+('c573e9e1-643e-42df-886e-fe7254a958e8', 'Ana López', 'operario', 'ana.lopez@bodegapiarelli.com', '2024-01-01 08:00:00'),
+('7073d270-3315-450f-8798-d494aa0f922a', 'Pedro Martínez', 'operario', 'pedro.martinez@bodegapiarelli.com', '2024-01-01 08:00:00'),
+('f3498035-817f-4a94-8475-780dc44e5563', 'Luis Fernández', 'operario', 'luis.fernandez@bodegapiarelli.com', '2024-01-01 08:00:00');
+
+-- Insertar datos en TAREAS (convertir prioridad de texto a número: alta=1, media=2, baja=3)
+INSERT INTO TAREAS (prioridad, nombre_tarea, fecha_tarea, estado, trabajador_id) VALUES
+(1, 'Revisar inventario vinos', '2024-01-15', 'pendiente', 'eeb7cf45-9ffa-43d4-b728-db0494227b31'),
+(2, 'Coordinación con proveedores', '2024-01-16', 'hecho', 'eeb7cf45-9ffa-43d4-b728-db0494227b31'),
+(1, 'Análisis de satisfacción clientes', '2024-01-17', 'pendiente', 'f3498035-817f-4a94-8475-780dc44e5563'),
+(3, 'Reunión equipo de limpieza', '2024-01-14', 'hecho', '7073d270-3315-450f-8798-d494aa0f922a'),
+(2, 'Control de calidad habitaciones', '2024-01-18', 'pendiente', 'c573e9e1-643e-42df-886e-fe7254a958e8');
+
+
+INSERT INTO VINOS (nombre_vino) VALUES
+('Malbec Reserve'),
+('Torrontés'),
+('Arlene Blend'),
+('Natural Sweet'),
+('Trinita');
+
+INSERT INTO ACTIVIDADES (nombre_actividad, tipo, precio_por_dia) VALUES
+('Spa', 'tour', 15.00),
+('Paseos 4x4', 'tour', 12.00),
+('Degustacion', 'cata', 80.00),
+('Jacuzzi', 'spa', 60.00);
+
+-- Ene
+INSERT INTO VENTAS_VINO (fecha_venta_vino, cantidad_venta, vino_id) VALUES
+('2025-01-28', 120, '28865c30-6f4d-432b-814c-93392d4ab7a3'), -- Torrontés
+('2025-01-28', 180, '4d4a5395-9fd9-4e56-9a22-89551e0c1029'), -- Malbec
+('2025-01-28', 90,  '4130afdb-f55a-465f-b222-f9dbc46426ac'), -- Natural Sweet
+('2025-01-28', 70,  '58fedc38-096a-4a5e-8d27-c822ba886852'), -- Trinita
+('2025-01-28', 110, '1cee0afb-c1c5-4102-aa02-f01fdf1c1006'); -- Arlene
+
+-- Feb
+INSERT INTO VENTAS_VINO (fecha_venta_vino, cantidad_venta, vino_id) VALUES
+('2025-02-28', 130, '28865c30-6f4d-432b-814c-93392d4ab7a3'),
+('2025-02-28', 190, '4d4a5395-9fd9-4e56-9a22-89551e0c1029'),
+('2025-02-28', 95,  '4130afdb-f55a-465f-b222-f9dbc46426ac'),
+('2025-02-28', 75,  '58fedc38-096a-4a5e-8d27-c822ba886852'),
+('2025-02-28', 115, '1cee0afb-c1c5-4102-aa02-f01fdf1c1006');
+
+-- Mar
+INSERT INTO VENTAS_VINO (fecha_venta_vino, cantidad_venta, vino_id) VALUES
+('2025-03-28', 125, '28865c30-6f4d-432b-814c-93392d4ab7a3'),
+('2025-03-28', 185, '4d4a5395-9fd9-4e56-9a22-89551e0c1029'),
+('2025-03-28', 100, '4130afdb-f55a-465f-b222-f9dbc46426ac'),
+('2025-03-28', 80,  '58fedc38-096a-4a5e-8d27-c822ba886852'),
+('2025-03-28', 120, '1cee0afb-c1c5-4102-aa02-f01fdf1c1006');
+
+-- Abr
+INSERT INTO VENTAS_VINO (fecha_venta_vino, cantidad_venta, vino_id) VALUES
+('2025-04-28', 140, '28865c30-6f4d-432b-814c-93392d4ab7a3'),
+('2025-04-28', 200, '4d4a5395-9fd9-4e56-9a22-89551e0c1029'),
+('2025-04-28', 110, '4130afdb-f55a-465f-b222-f9dbc46426ac'),
+('2025-04-28', 85,  '58fedc38-096a-4a5e-8d27-c822ba886852'),
+('2025-04-28', 125, '1cee0afb-c1c5-4102-aa02-f01fdf1c1006');
+
+-- May
+INSERT INTO VENTAS_VINO (fecha_venta_vino, cantidad_venta, vino_id) VALUES
+('2025-05-28', 150, '28865c30-6f4d-432b-814c-93392d4ab7a3'),
+('2025-05-28', 210, '4d4a5395-9fd9-4e56-9a22-89551e0c1029'),
+('2025-05-28', 115, '4130afdb-f55a-465f-b222-f9dbc46426ac'),
+('2025-05-28', 90,  '58fedc38-096a-4a5e-8d27-c822ba886852'),
+('2025-05-28', 130, '1cee0afb-c1c5-4102-aa02-f01fdf1c1006');
+
+-- Jun
+INSERT INTO VENTAS_VINO (fecha_venta_vino, cantidad_venta, vino_id) VALUES
+('2025-06-28', 160, '28865c30-6f4d-432b-814c-93392d4ab7a3'),
+('2025-06-28', 220, '4d4a5395-9fd9-4e56-9a22-89551e0c1029'),
+('2025-06-28', 120, '4130afdb-f55a-465f-b222-f9dbc46426ac'),
+('2025-06-28', 95,  '58fedc38-096a-4a5e-8d27-c822ba886852'),
+('2025-06-28', 140, '1cee0afb-c1c5-4102-aa02-f01fdf1c1006');
+
+
+INSERT INTO CLIENTES (nom_cli, apel_cli, dni_cli, email_cli) VALUES
+('María', 'González', '12345678A', 'maria.gonzalez@email.com'),
+('Carlos', 'Rodríguez', '23456789B', 'carlos.rodriguez@email.com'),
+('Ana', 'Martínez', '34567890C', 'ana.martinez@email.com'),
+('Luis', 'Fernández', '45678901D', 'luis.fernandez@email.com'),
+('Elena', 'López', '56789012E', 'elena.lopez@email.com'),
+('Javier', 'Pérez', '67890123F', 'javier.perez@email.com'),
+('Sofía', 'García', '78901234G', 'sofia.garcia@email.com'),
+('Diego', 'Sánchez', '89012345H', 'diego.sanchez@email.com'),
+('Laura', 'Ramírez', '90123456I', 'laura.ramirez@email.com'),
+('Miguel', 'Torres', '01234567J', 'miguel.torres@email.com');
+
+
+INSERT INTO RESERVAS (cliente_id, cantidad_personas, fecha_inicio, fecha_fin, total_pagar, metodo_pago, estado) VALUES
+-- Reservas para María González
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '12345678A'), 2, '2024-03-01', '2024-03-05', 450.00, 'tarjeta', 'confirmada'),
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '12345678A'), 1, '2024-04-10', '2024-04-12', 180.00, 'efectivo', 'pendiente'),
+
+-- Reservas para Carlos Rodríguez
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '23456789B'), 4, '2024-03-15', '2024-03-20', 1200.00, 'transferencia', 'confirmada'),
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '23456789B'), 2, '2024-05-01', '2024-05-07', 850.00, 'tarjeta', 'confirmada'),
+
+-- Reservas para Ana Martínez
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '34567890C'), 2, '2024-03-08', '2024-03-10', 300.00, 'efectivo', 'confirmada'),
+
+-- Reservas para Luis Fernández
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '45678901D'), 3, '2024-04-20', '2024-04-25', 675.00, 'tarjeta', 'pendiente'),
+
+-- Reservas para Elena López
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '56789012E'), 2, '2024-03-25', '2024-03-28', 360.00, 'transferencia', 'confirmada'),
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '56789012E'), 1, '2024-06-10', '2024-06-15', 625.00, 'tarjeta', 'pendiente'),
+
+-- Reservas para Javier Pérez
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '67890123F'), 5, '2024-05-15', '2024-05-20', 1500.00, 'transferencia', 'confirmada'),
+
+-- Reservas para Sofía García
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '78901234G'), 2, '2024-04-05', '2024-04-08', 420.00, 'efectivo', 'confirmada'),
+
+-- Reservas para Diego Sánchez
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '89012345H'), 2, '2024-03-12', '2024-03-14', 240.00, 'tarjeta', 'cancelada'),
+
+-- Reservas para Laura Ramírez
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '90123456I'), 3, '2024-05-25', '2024-05-30', 825.00, 'transferencia', 'pendiente'),
+
+-- Reservas para Miguel Torres
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '01234567J'), 2, '2024-04-15', '2024-04-18', 390.00, 'efectivo', 'confirmada'),
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '01234567J'), 4, '2024-07-01', '2024-07-10', 2100.00, 'tarjeta', 'pendiente');
+
+INSERT INTO VALORACIONES (valoracion, comentario, c_satisfecho, cliente_id, habitacion_id) VALUES
+-- 5 valoraciones con "si" en c_satisfecho
+(5, 'Excelente servicio y habitación muy cómoda. Volveré sin duda.', 'si', 
+ (SELECT cliente_id FROM CLIENTES LIMIT 1 OFFSET 0),
+ (SELECT habitacion_id FROM HABITACIONES LIMIT 1 OFFSET 0)),
+
+(4, 'Muy buena estadía, el personal muy amable. La habitación impecable.', 'si',
+ (SELECT cliente_id FROM CLIENTES LIMIT 1 OFFSET 1),
+ (SELECT habitacion_id FROM HABITACIONES LIMIT 1 OFFSET 1)),
+
+(5, 'Increíble experiencia, las instalaciones son de primera calidad.', 'si',
+ (SELECT cliente_id FROM CLIENTES LIMIT 1 OFFSET 2),
+ (SELECT habitacion_id FROM HABITACIONES LIMIT 1 OFFSET 2)),
+
+(4, 'Muy satisfecho con la atención y la limpieza del lugar.', 'si',
+ (SELECT cliente_id FROM CLIENTES LIMIT 1 OFFSET 3),
+ (SELECT habitacion_id FROM HABITACIONES LIMIT 1 OFFSET 3)),
+
+(5, 'Perfecto para descansar, la cama era muy cómoda y el silencio absoluto.', 'si',
+ (SELECT cliente_id FROM CLIENTES LIMIT 1 OFFSET 4),
+ (SELECT habitacion_id FROM HABITACIONES LIMIT 1 OFFSET 4)),
+
+-- 1 valoración con "no" en c_satisfecho
+(2, 'El servicio de habitaciones fue lento y había ruido por la noche.', 'no',
+ (SELECT cliente_id FROM CLIENTES LIMIT 1 OFFSET 5),
+ (SELECT habitacion_id FROM HABITACIONES LIMIT 1 OFFSET 5));
+
+-----------------------------------------
+
+ -- RELACIÓN RESERVAS ↔ HABITACIONES
+INSERT INTO RESERVAS_HABITACIONES (reserva_id, habitacion_id)
+VALUES
+-- María González
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 0), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1)),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 1), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'ejecutiva' LIMIT 1)),
+
+-- Carlos Rodríguez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 2), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1)),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 3), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1 OFFSET 1)),
+
+-- Ana Martínez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 4), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'ejecutiva' LIMIT 1 OFFSET 1)),
+
+-- Luis Fernández
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 5), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1 OFFSET 1)),
+
+-- Elena López
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 6), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'ejecutiva' LIMIT 1)),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 7), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1 OFFSET 1)),
+
+-- Javier Pérez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 8), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1 OFFSET 2)),
+
+-- Sofía García
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 9), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1 OFFSET 2)),
+
+-- Diego Sánchez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 10), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'ejecutiva' LIMIT 1 OFFSET 1)),
+
+-- Laura Ramírez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 11), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1 OFFSET 3)),
+
+-- Miguel Torres
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 12), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1)),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 13), (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1 OFFSET 2));
+
+
+-----------------------------------------
+
+-- RELACIÓN RESERVAS ↔ ACTIVIDADES
+INSERT INTO RESERVAS_ACTIVIDADES (reserva_id, actividad_id, fecha_inicio_act, fecha_fin_act)
+VALUES
+-- María González
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 0),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Degustacion'),
+ '2024-03-02', '2024-03-02'),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 1),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Spa'),
+ '2024-04-11', '2024-04-11'),
+
+-- Carlos Rodríguez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 2),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Paseos 4x4'),
+ '2024-03-17', '2024-03-18'),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 3),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Degustacion'),
+ '2024-05-03', '2024-05-04'),
+
+-- Ana Martínez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 4),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Spa'),
+ '2024-03-09', '2024-03-09'),
+
+-- Luis Fernández
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 5),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Jacuzzi'),
+ '2024-04-22', '2024-04-23'),
+
+-- Elena López
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 6),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Degustacion'),
+ '2024-03-26', '2024-03-26'),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 7),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Spa'),
+ '2024-06-12', '2024-06-12'),
+
+-- Javier Pérez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 8),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Paseos 4x4'),
+ '2024-05-17', '2024-05-18'),
+
+-- Sofía García
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 9),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Jacuzzi'),
+ '2024-04-06', '2024-04-06'),
+
+-- Diego Sánchez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 10),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Degustacion'),
+ '2024-03-13', '2024-03-13'),
+
+-- Laura Ramírez
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 11),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Paseos 4x4'),
+ '2024-05-27', '2024-05-28'),
+
+-- Miguel Torres
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 12),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Spa'),
+ '2024-04-16', '2024-04-17'),
+((SELECT reserva_id FROM RESERVAS LIMIT 1 OFFSET 13),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Degustacion'),
+ '2024-07-04', '2024-07-05');
+
+
+
+----------------------------------------
+
+
+
+-- INSERT de 5 reservas nuevas para 2026
+INSERT INTO RESERVAS (cliente_id, cantidad_personas, fecha_inicio, fecha_fin, total_pagar, metodo_pago, estado) VALUES
+-- Reserva 1: María González - Vacaciones de verano 2026
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '12345678A'), 2, '2026-07-15', '2026-07-22', 1200.00, 'tarjeta', 'confirmada'),
+
+-- Reserva 2: Carlos Rodríguez - Año nuevo 2026
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '23456789B'), 4, '2026-12-28', '2027-01-03', 2500.00, 'transferencia', 'confirmada'),
+
+-- Reserva 3: Ana Martínez - Primavera 2026
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '34567890C'), 2, '2026-04-10', '2026-04-15', 800.00, 'efectivo', 'pendiente'),
+
+-- Reserva 4: Luis Fernández - Verano 2026
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '45678901D'), 3, '2026-08-05', '2026-08-12', 1500.00, 'tarjeta', 'confirmada'),
+
+-- Reserva 5: Elena López - Aniversario 2026
+((SELECT cliente_id FROM CLIENTES WHERE dni_cli = '56789012E'), 2, '2026-05-20', '2026-05-25', 900.00, 'transferencia', 'pendiente');
+
+-- RELACIÓN RESERVAS ↔ HABITACIONES para las nuevas reservas 2026
+INSERT INTO RESERVAS_HABITACIONES (reserva_id, habitacion_id)
+VALUES
+-- María González 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-07-15'), 
+ (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1)),
+
+-- Carlos Rodríguez 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-12-28'), 
+ (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1)),
+
+-- Ana Martínez 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-04-10'), 
+ (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'ejecutiva' LIMIT 1)),
+
+-- Luis Fernández 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-08-05'), 
+ (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'glamping' LIMIT 1 OFFSET 1)),
+
+-- Elena López 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-05-20'), 
+ (SELECT habitacion_id FROM HABITACIONES WHERE tipo_habitacion = 'matrimonial' LIMIT 1 OFFSET 1));
+
+-- RELACIÓN RESERVAS ↔ ACTIVIDADES para las nuevas reservas 2026
+INSERT INTO RESERVAS_ACTIVIDADES (reserva_id, actividad_id, fecha_inicio_act, fecha_fin_act)
+VALUES
+-- María González 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-07-15'),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Paseos 4x4'),
+ '2026-07-16', '2026-07-17'),
+
+-- Carlos Rodríguez 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-12-28'),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Jacuzzi'),
+ '2026-12-29', '2026-12-30'),
+
+-- Ana Martínez 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-04-10'),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Spa'),
+ '2026-04-11', '2026-04-11'),
+
+-- Luis Fernández 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-08-05'),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Degustacion'),
+ '2026-08-06', '2026-08-06'),
+
+-- Elena López 2026
+((SELECT reserva_id FROM RESERVAS WHERE fecha_inicio = '2026-05-20'),
+ (SELECT actividad_id FROM ACTIVIDADES WHERE nombre_actividad = 'Spa'),
+ '2026-05-21', '2026-05-21');
+
+ --- actualizar estado habitacion
+ -- Actualizar estado de habitaciones para TODAS las reservas del 2026
+-- Actualizar TODAS las habitaciones según su disponibilidad en 2026
+BEGIN TRANSACTION;
+
+-- 1. Poner como ocupadas las habitaciones reservadas en 2026
+UPDATE HABITACIONES 
+SET estado = 'ocupada' 
+WHERE habitacion_id IN (
+  SELECT rh.habitacion_id 
+  FROM RESERVAS_HABITACIONES rh
+  INNER JOIN RESERVAS r ON rh.reserva_id = r.reserva_id
+  WHERE EXTRACT(YEAR FROM r.fecha_inicio) = 2026
+);
+
+-- 2. Poner como libres las habitaciones NO reservadas en 2026
+UPDATE HABITACIONES 
+SET estado = 'libre' 
+WHERE habitacion_id NOT IN (
+  SELECT rh.habitacion_id 
+  FROM RESERVAS_HABITACIONES rh
+  INNER JOIN RESERVAS r ON rh.reserva_id = r.reserva_id
+  WHERE EXTRACT(YEAR FROM r.fecha_inicio) = 2026
+);
+
+COMMIT;

@@ -1,0 +1,77 @@
+.header {
+  position: fixed; /* se queda arriba aunque hagas scroll */
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 30px 40px 25px 40px;
+  background: rgba(0, 0, 0, 0.4); /* negro con transparencia */
+  color: rgb(255, 255, 255);
+  z-index: 1000;
+  font-family: "Georgia", serif;
+  backdrop-filter: blur(2px);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  font-family: alegreya SC;
+  letter-spacing: 2px;
+}
+
+.nav-links {
+  display: flex;
+  margin-left: auto;
+  padding-right: 2em;
+  padding-left: 2em;
+  gap: 15px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: white;
+  font-size: 16px;
+  transition: color 0.3s ease;
+  font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial,
+    sans-serif;
+}
+
+.nav-links a:hover {
+  color: #ff9000;
+}
+
+.nav-links .active-link {
+  color: #ff9000; /* color de la pestaña actual */
+  border-bottom: 2px solid #ff9000; /* opcional, subrayado */
+}
+
+/* Esquinas decorativas */
+.corner {
+  position: absolute;
+  width: 80px; /* ajustá al tamaño que quieras */
+  height: auto;
+}
+
+.top-left {
+  bottom: 0;
+  left: 0;
+}
+
+.top-right {
+  bottom: 0;
+  right: 0;
+  transform: rotateY(180deg);
+}
+
+.bottom-left {
+  top: 0;
+  left: 0;
+  transform: rotateX(180deg);
+}
+
+.bottom-right {
+  top: 0;
+  right: 0;
+  transform: rotate(180deg);
+}

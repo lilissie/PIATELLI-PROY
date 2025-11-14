@@ -1,0 +1,10 @@
+Levantar servidor:
+node index.js
+Levantar front
+npm run dev
+
+Ngrok:
+ngrok authtoken xxxx
+ngrok http 3000
+-------------------------------------------------------
+
