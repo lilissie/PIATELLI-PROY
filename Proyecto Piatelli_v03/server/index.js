@@ -17,15 +17,6 @@ app.use(express.json());
 
 
 
-// ============================================
-// CONFIGURACIÓN GMAIL API
-// ============================================
-
-const oauth2Client = new google.auth.OAuth2(
-  "920700430061-tkp95n27u1j3uh1ferm4vug5171c6g41.apps.googleusercontent.com",
-  "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",
-  "http://localhost:5000/oauth2callback"
-);
 
 let currentTokens = null;
 
