@@ -1,0 +1,650 @@
+.reserva-factura {
+  background: linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.factura-container {
+  max-width: 800px;
+  width: 100%;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  position: relative;
+  margin: 2rem 0;
+}
+
+/* Efecto de papel cortado */
+.paper-cut-top {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%);
+  clip-path: polygon(
+    0% 0%,
+    2% 100%,
+    4% 0%,
+    6% 100%,
+    8% 0%,
+    10% 100%,
+    12% 0%,
+    14% 100%,
+    16% 0%,
+    18% 100%,
+    20% 0%,
+    22% 100%,
+    24% 0%,
+    26% 100%,
+    28% 0%,
+    30% 100%,
+    32% 0%,
+    34% 100%,
+    36% 0%,
+    38% 100%,
+    40% 0%,
+    42% 100%,
+    44% 0%,
+    46% 100%,
+    48% 0%,
+    50% 100%,
+    52% 0%,
+    54% 100%,
+    56% 0%,
+    58% 100%,
+    60% 0%,
+    62% 100%,
+    64% 0%,
+    66% 100%,
+    68% 0%,
+    70% 100%,
+    72% 0%,
+    74% 100%,
+    76% 0%,
+    78% 100%,
+    80% 0%,
+    82% 100%,
+    84% 0%,
+    86% 100%,
+    88% 0%,
+    90% 100%,
+    92% 0%,
+    94% 100%,
+    96% 0%,
+    98% 100%,
+    100% 0%
+  );
+}
+
+.factura-header {
+  background: linear-gradient(135deg, #ff8d06 0%, #ffaa41 100%);
+  color: white;
+  padding: 3rem 2rem 2rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.factura-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+      circle at 20% 80%,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+}
+
+.factura-titulo {
+  font-family: "Alegreya SC", serif;
+  font-size: 2.3rem;
+  font-weight: 300;
+  margin: 1rem 0;
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+}
+
+.factura-subtitulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.factura-subtitulo h2 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: #fff8f0;
+}
+
+.estado-reserva {
+  padding: 0.6rem 1.8rem;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.estado-pendiente {
+  background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+  color: white;
+}
+
+/* Secciones */
+.seccion-datos,
+.seccion-personas,
+.seccion-fechas,
+.seccion-alojamiento,
+.seccion-actividades,
+.seccion-resumen {
+  padding: 2rem;
+}
+
+.seccion-titulo {
+  color: #ff8d06;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border-bottom: 2px solid #ff8d06;
+  padding-bottom: 0.5rem;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Formulario Datos Personales */
+.formulario-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  font-weight: 600;
+  text-align: left;
+  color: #666;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.input-group input,
+.dropdown-alojamiento {
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.input-group input:focus,
+.dropdown-alojamiento:focus {
+  outline: none;
+  border-color: #ff8c00;
+  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+}
+
+/* Contador Personas */
+.contador-personas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  background: linear-gradient(135deg, #fff8f0 0%, #ffe8cc 100%);
+  padding: 1.5rem;
+  border-radius: 15px;
+  border: 2px solid #ff8d06;
+}
+
+.persona-icono {
+  font-size: 1.5rem;
+  color: #ff8d06;
+}
+
+.btn-contador {
+  background: #ff8d06;
+  color: white;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.btn-contador:hover {
+  background: #e67e00;
+  transform: scale(1.1);
+}
+
+.cantidad-personas {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ff8d06;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Fechas */
+.fechas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.icono-fecha {
+  margin-right: 0.5rem;
+  color: #ff8d06;
+}
+
+/* Actividades */
+.lista-actividades {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.actividad-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.actividad-item:hover {
+  background: #fff8f0;
+  border-color: #ff8d06;
+}
+
+.actividad-item input {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  margin-right: 1rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.actividad-item input:checked + .checkmark {
+  background: #ff8d06;
+  border-color: #ff8d06;
+}
+
+.actividad-item input:checked + .checkmark::after {
+  content: "✓";
+  color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.actividad-nombre {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.actividad-precio {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+/* Resumen */
+.resumen-detalles {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+}
+
+.resumen-linea,
+.resumen-total {
+  display: flex;
+  justify-content: space-between;
+
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resumen-linea {
+  gap: 2rem;
+}
+
+.resumen-total {
+  border-bottom: none;
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  padding-top: 1rem;
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.total-monto {
+  color: #ff8d06;
+  font-size: 1.4rem;
+}
+
+.resumen-actividades {
+  margin-bottom: 1rem;
+}
+
+.actividades-lista {
+  margin-top: 0.5rem;
+}
+
+.actividad-resumen {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 0.3rem;
+}
+
+.medio-pago {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.medio-pago .label {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.mercado-pago-badge {
+  background: linear-gradient(45deg, #009ee3, #00b2ff);
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 25px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 158, 227, 0.3);
+}
+
+/* Botones */
+.factura-actions {
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #dee2e6;
+}
+
+.btn-pagar {
+  background: linear-gradient(45deg, #27ae60, #2ecc71);
+  color: white;
+  padding: 1.2rem 3rem;
+  border: none;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+}
+
+.btn-pagar:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(39, 174, 96, 0.6);
+}
+
+.divisor {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ddd, transparent);
+  margin: 0 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .reserva-factura {
+    padding: 1rem;
+  }
+
+  .formulario-grid,
+  .fechas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .factura-subtitulo {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .contador-personas {
+    flex-wrap: wrap;
+  }
+
+  .medio-pago {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+}
+
+/* Estilos para etiquetas de alojamiento */
+.etiquetas-alojamiento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.etiqueta-alojamiento {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #ff8d06, #ffaa41);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(255, 141, 6, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.etiqueta-texto {
+  margin-right: 0.5rem;
+}
+
+.etiqueta-eliminar {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.etiqueta-eliminar:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Ajustar el dropdown */
+.dropdown-alojamiento {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  cursor: pointer;
+}
+
+.dropdown-alojamiento:focus {
+  outline: none;
+  border-color: #ff8d06;
+  box-shadow: 0 0 0 3px rgba(255, 141, 6, 0.1);
+}
+/* Estilos para mensajes de error */
+.mensaje-error {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+  display: block;
+  font-weight: 500;
+}
+
+.input-group input.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+/* Mensajes de capacidad */
+.mensaje-capacidad {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mensaje-capacidad.suficiente {
+  background: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+  border: 1px solid #27ae60;
+}
+
+.mensaje-capacidad.insuficiente {
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+}
+
+/* Info rango personas */
+.info-rango {
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* Calendario salón */
+.calendario-salon {
+  margin: 1rem 0;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #ff8d06;
+}
+
+.calendario-salon h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.info-dias-salón {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #e8f4fd;
+  border-radius: 6px;
+  color: #2980b9;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Mejorar items del resumen */
+.item-resumen {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  padding: 0.3rem 0;
+}
+
+.alojamientos-lista,
+.actividades-lista {
+  width: 100%;
+}
+
+/* Botones deshabilitados */
+.btn-contador:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-contador:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .calendario-salon .fechas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mensaje-capacidad {
+    flex-direction: column;
+    text-align: center;
+  }
+}
